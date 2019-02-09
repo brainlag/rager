@@ -39,6 +39,7 @@ enum RagerEvent {
 #[derive(Copy, Clone)]
 struct RagerChar(char, bool, bool, bool, bool, ransid::color::Color);
 
+#[derive(Clone)]
 struct Buffer(usize, usize, RagerChar, Vec<Vec<RagerChar>>);
 
 impl Buffer {
@@ -173,10 +174,20 @@ fn run(
                 }
             }
 
+            let write_statusbar = |screen: &mut MyTerminal, pos: usize| {
+                let matrix_height = matrix.height();
+                let text = format!("({},{}) {}%", pos, pos+screen_height-2, ((pos as f64 / matrix_height as f64)*100 as f64) as usize);
+                let mut itr = text.chars();
+                for x in 0..screen_width {
+                    write_char(screen, RagerChar(itr.next().unwrap_or(' '), false, false, false, false, ransid::color::Color::Ansi(15)), x, screen_height-1);
+                }
+            };
+
             let redraw_from = |screen: &mut MyTerminal, buffer: &Buffer, row: usize| {
-                for y in 0..screen_height {
+                for y in 0..screen_height-1 {
                     write_row(screen, buffer, row + y, y);
                 }
+                write_statusbar(screen, row);
             };
 
             let update = |screen: &mut MyTerminal, matrix: &mut Buffer, c, x, y, bold, underlined, italic, strikethrough, color| {
@@ -256,6 +267,7 @@ fn run(
                             for x in 0..matrix_width {
                                 write_char(&mut screen, matrix.get(x, scroll), x, 0);
                             }
+                            write_statusbar(&mut screen, scroll);
                         }
                     }
                     RagerEvent::ScrollUp => {
@@ -268,8 +280,9 @@ fn run(
                             let matrix_width = matrix.width() as usize;
                             let matrix_height = matrix.height() as usize;
                             for x in 0..matrix_width {
-                                write_char(&mut screen, matrix.get(x, scroll + screen_height as usize), x, matrix_height);
+                                write_char(&mut screen, matrix.get(x, (scroll + screen_height)-2), x, matrix_height-2);
                             }
+                            write_statusbar(&mut screen, scroll);
                         }
 
                     }
